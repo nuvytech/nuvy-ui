@@ -135,3 +135,20 @@
     background-color: color-mix(in oklab, var(--primary) 85%, var(--foreground));
   }
 }
+/* Movimento do botão (igual ao layout padrão): sobe 1 px com brilho da própria cor e afunda ao clicar.
+   Usa a propriedade translate (não transform) para não somar com utilitários da spartan. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  [data-slot='button']:not(:disabled, [aria-disabled='true']) {
+    transition-property: color, background-color, border-color, box-shadow, translate, scale;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+  [data-slot='button'].bg-primary:not(:disabled, [aria-disabled='true']):hover {
+    translate: 0 -1px;
+    box-shadow: 0 8px 20px -8px color-mix(in oklab, var(--primary) 65%, transparent);
+  }
+  [data-slot='button']:not(:disabled, [aria-disabled='true']):active {
+    translate: 0 0;
+    scale: 0.98;
+  }
+}
