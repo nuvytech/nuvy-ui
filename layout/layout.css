@@ -17,7 +17,15 @@
   --nv-campo: color-mix(in oklab, var(--input) 30%, transparent);
   --nv-raio-controle: calc(var(--radius) * 0.8);
   --nv-raio-cartao: calc(var(--radius) * 1.4);
-  --nv-sombra: 0 1px 2px color-mix(in oklab, var(--background) 80%, transparent);
+  /* Sombra em duas camadas (contato + ambiente) com tom da marca, e um fio de luz no topo dos cartões no escuro. */
+  --nv-sombra-cor: color-mix(in oklab, black 78%, var(--primary));
+  --nv-sombra: 0 1px 2px color-mix(in oklab, var(--nv-sombra-cor) 14%, transparent),
+    0 8px 24px -12px color-mix(in oklab, var(--nv-sombra-cor) 30%, transparent),
+    inset 0 1px 0 color-mix(in oklab, white 5%, transparent);
+  --nv-sombra-elevada: 0 2px 4px color-mix(in oklab, var(--nv-sombra-cor) 16%, transparent),
+    0 14px 32px -12px color-mix(in oklab, var(--nv-sombra-cor) 40%, transparent),
+    inset 0 1px 0 color-mix(in oklab, white 6%, transparent);
+  --nv-brilho-primario: 0 8px 20px -8px color-mix(in oklab, var(--primary) 65%, transparent);
   --nv-foco: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
   --nv-controle: 44px;
   --nv-espaco: 20px;
@@ -36,8 +44,12 @@
   margin: 0;
   font: 16px/1.6 var(--font-sans);
   color: var(--foreground);
-  background: var(--background);
+  /* Um halo leve da marca no alto da página dá profundidade sem competir com o conteúdo. */
+  background: radial-gradient(1100px 560px at 88% -160px, color-mix(in oklab, var(--marca) 11%, transparent), transparent 70%)
+      no-repeat,
+    var(--background);
   -webkit-text-size-adjust: 100%;
+  font-feature-settings: 'cv11', 'calt';
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -212,9 +224,13 @@
   text-decoration: none;
   color: var(--muted-foreground);
   border-bottom: 3px solid transparent;
+  border-radius: var(--nv-raio-controle) var(--nv-raio-controle) 0 0;
+  transition: color var(--nv-mov-rapido) var(--nv-mov-curva), background-color var(--nv-mov-rapido) var(--nv-mov-curva),
+    border-color var(--nv-mov) var(--nv-mov-curva);
 }
 .nv-pagina .nv-nav__link:hover {
   color: var(--foreground);
+  background: color-mix(in oklab, var(--accent) 55%, transparent);
   border-bottom-color: var(--input);
 }
 .nv-pagina .nv-nav__link[aria-current='page'] {
@@ -348,10 +364,10 @@
 }
 .nv-indicador__valor {
   display: block;
-  font-size: 30px;
+  font-size: clamp(28px, 1vw + 22px, 34px);
   font-weight: 750;
-  line-height: 1.15;
-  letter-spacing: -0.02em;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
   overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
   color: var(--foreground);
@@ -392,15 +408,21 @@
   border: 1px solid var(--primary);
   border-radius: var(--nv-raio-controle);
   box-shadow: var(--nv-sombra);
-  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+  transition: background-color var(--nv-mov-rapido) var(--nv-mov-curva), border-color var(--nv-mov-rapido) var(--nv-mov-curva),
+    box-shadow var(--nv-mov) var(--nv-mov-curva), transform var(--nv-mov) var(--nv-mov-curva);
 }
+/* Com o mouse em cima o botão sobe 1 px e ganha um brilho da própria cor; ao clicar, afunda. */
 .nv-pagina .nv-botao:hover {
   color: var(--primary-foreground);
   background: var(--nv-primario-hover);
   border-color: var(--nv-primario-hover);
+  box-shadow: var(--nv-brilho-primario);
+  transform: translateY(-1px);
 }
-.nv-botao:active {
-  transform: translateY(1px);
+.nv-botao:active,
+.nv-pagina .nv-botao:active {
+  transform: translateY(0) scale(0.98);
+  transition-duration: 60ms;
 }
 .nv-pagina .nv-botao--secundario {
   color: var(--primary);
@@ -412,6 +434,7 @@
   color: var(--primary);
   background: var(--accent);
   border-color: var(--primary);
+  box-shadow: 0 6px 16px -10px color-mix(in oklab, var(--primary) 70%, transparent);
 }
 .nv-pagina .nv-botao--perigo {
   color: var(--destructive-foreground);
@@ -423,6 +446,7 @@
   background: var(--destructive);
   border-color: var(--destructive);
   filter: brightness(1.08);
+  box-shadow: 0 8px 20px -8px color-mix(in oklab, var(--destructive) 60%, transparent);
 }
 .nv-botao--pequeno {
   padding: var(--nv-esp-2) var(--nv-esp-4);
@@ -462,6 +486,12 @@ summary.nv-botao::-webkit-details-marker {
 .nv-botao[aria-disabled='true'] {
   opacity: 0.55;
   cursor: not-allowed;
+}
+/* Desabilitado não sobe, não brilha e não afunda. */
+.nv-pagina .nv-botao:disabled:is(:hover, :active),
+.nv-pagina .nv-botao[aria-disabled='true']:is(:hover, :active) {
+  transform: none;
+  box-shadow: none;
 }
 /* Desabilitado não reage ao mouse: mantém a cor da variante. */
 .nv-pagina .nv-botao:disabled:hover,
@@ -515,6 +545,7 @@ summary.nv-botao::-webkit-details-marker {
   background: var(--accent);
   border-color: transparent;
   filter: none;
+  box-shadow: none;
 }
 .nv-pagina .nv-botao.nv-botao--icone.nv-botao--perigo {
   color: var(--destructive);
@@ -1241,6 +1272,10 @@ summary.nv-botao::-webkit-details-marker {
 
 /* Movimento reduzido: esqueleto parado (sem brilho); modal, aviso e menu só com um fade curto, sem deslocar nem escalar. */
 @media (prefers-reduced-motion: reduce) {
+  .nv-pagina .nv-botao:is(:hover, :active),
+  .nv-pagina .nv-lateral__link:hover .nv-lateral__icone {
+    transform: none;
+  }
   .nv-esqueleto::after {
     display: none;
     animation: none;
@@ -1343,6 +1378,13 @@ summary.nv-botao::-webkit-details-marker {
   font-weight: 500;
   line-height: 1.3;
   text-decoration: none;
+  transition: color var(--nv-mov-rapido) var(--nv-mov-curva);
+}
+.nv-lateral__link .nv-lateral__icone {
+  transition: transform var(--nv-mov) var(--nv-mov-curva);
+}
+.nv-pagina .nv-lateral__link:hover .nv-lateral__icone {
+  transform: translateX(2px);
 }
 .nv-pagina .nv-lateral__link {
   color: var(--muted-foreground);
@@ -1355,6 +1397,7 @@ summary.nv-botao::-webkit-details-marker {
 .nv-pagina .nv-lateral__link:hover {
   background: var(--sidebar-accent);
   color: var(--sidebar-accent-foreground);
+  box-shadow: inset 2px 0 0 color-mix(in oklab, var(--marca-2) 45%, transparent);
 }
 .nv-pagina .nv-lateral__link[aria-current='page'] {
   background: var(--sidebar-accent);
