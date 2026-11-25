@@ -29,6 +29,7 @@ Não há dependências npm. Precisa de Node 22 ou mais novo.
 - `modelos/layout-exemplo.html`: página de exemplo com todas as peças do layout, com dados fictícios.
 - Transições sutis (esqueleto, modal, aviso, menu suspenso): [docs/transicoes.md](docs/transicoes.md).
 - Pilha de avisos `nuvyAviso` (`modelos/nuvy-aviso.js`): [docs/avisos.md](docs/avisos.md). Número animado `.nv-numero`: [docs/numero.md](docs/numero.md).
+- Efeitos de vitrine (letreiro, borda viva, brilho, texto em gradiente, palavra que gira, cartão 3D) com `modelos/nuvy-efeitos.js`: [docs/efeitos.md](docs/efeitos.md). Regras de movimento (tokens, só `transform`/`opacity`, movimento reduzido): [docs/movimento.md](docs/movimento.md). Prévia: `previa/efeitos.html`.
 - `modelos/layout-lateral-exemplo.html` e `modelos/nuvy-lateral.js`: variante com coluna lateral (recolhível, gaveta no celular); ver [docs/layout-lateral.md](docs/layout-lateral.md). Prévia: `previa/layout-lateral.html`.
 - `modelos/`: o script do modo escuro (`nuvy-tema.js`), o serviço Angular do botão de tema e o preparo dos testes Vitest (`preparo-testes.ts`, copiado como `src/test-setup.ts`).
 
