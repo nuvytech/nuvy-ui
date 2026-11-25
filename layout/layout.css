@@ -1270,6 +1270,118 @@ summary.nv-botao::-webkit-details-marker {
   }
 }
 
+/* Pilha de avisos: montada por modelos/nuvy-aviso.js dentro de .nv-avisos (<ol class="nv-avisos__lista">).
+   Os avisos ficam empilhados no mesmo lugar; os de trás sobem um pouco e encolhem pela --nv-indice
+   (0 = o mais novo). Com o mouse ou o foco na pilha (data-expandido), cada um sobe a --nv-desloc
+   (altura dos mais novos) e todos ficam visíveis. Entra com @starting-style; sai com data-saindo.
+   Só opacity e transform animam. */
+.nv-avisos__lista {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nv-avisos .nv-avisos__lista > .nv-aviso {
+  /* Padrões; o nuvy-aviso.js escreve os valores de cada aviso no style dele. */
+  --nv-indice: 0;
+  --nv-desloc: 0px;
+  grid-area: 1 / 1;
+  align-self: end;
+  margin: 0;
+  padding-right: calc(var(--nv-controle) + var(--nv-esp-1));
+  z-index: calc(10 - var(--nv-indice));
+  transform: translateY(calc(var(--nv-indice) * -10px)) scale(calc(1 - var(--nv-indice) * 0.05));
+  transform-origin: bottom center;
+  touch-action: pan-y;
+  animation: none;
+  transition:
+    opacity var(--nv-mov) var(--nv-mov-curva),
+    transform var(--nv-mov) var(--nv-mov-curva);
+}
+.nv-avisos[data-expandido] .nv-avisos__lista > .nv-aviso {
+  transform: translateY(calc(var(--nv-desloc) * -1));
+}
+.nv-avisos .nv-avisos__lista > .nv-aviso[data-saindo] {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+.nv-avisos .nv-avisos__lista > .nv-aviso[data-arrastando] {
+  transition: none;
+  cursor: grabbing;
+}
+@starting-style {
+  .nv-avisos .nv-avisos__lista > .nv-aviso {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.nv-avisos .nv-avisos__lista > .nv-aviso:focus-visible {
+  outline: none;
+  box-shadow: var(--nv-foco), var(--nv-sombra);
+}
+.nv-aviso__titulo,
+.nv-aviso__texto {
+  margin: 0;
+}
+.nv-aviso__titulo {
+  font-weight: 600;
+}
+.nv-aviso__titulo[hidden] {
+  display: none;
+}
+.nv-aviso__fechar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: var(--nv-controle);
+  min-width: var(--nv-controle);
+  height: var(--nv-controle);
+  min-height: var(--nv-controle);
+  padding: 0;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: var(--nv-raio-controle);
+  cursor: pointer;
+}
+.nv-aviso__acao {
+  min-height: var(--nv-controle);
+  margin-top: var(--nv-esp-2);
+  padding: 0 var(--nv-esp-3);
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--nv-raio-controle);
+  cursor: pointer;
+}
+.nv-aviso__fechar:focus-visible,
+.nv-aviso__acao:focus-visible {
+  outline: none;
+  box-shadow: var(--nv-foco);
+}
+/* Carregando (nuvyAviso.promessa): o ícone vira um anel que gira só com transform. */
+.nv-aviso--carregando::before {
+  content: '';
+  color: inherit;
+  background: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: nv-gira calc(var(--nv-mov) * 4) linear infinite;
+}
+@keyframes nv-gira {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
 /* Menu suspenso: <details class="nv-menu-suspenso"> com <summary> e <ul class="nv-menu-suspenso__lista">.
    A lista aparece com fade + leve descida a partir do botão. */
 .nv-menu-suspenso {
@@ -1358,8 +1470,31 @@ summary.nv-botao::-webkit-details-marker {
   .nv-numero__simbolo {
     transition: none;
   }
+  /* Pilha de avisos: um embaixo do outro, sem deslocar nem encolher; só o fade curto. */
+  .nv-avisos .nv-avisos__lista > .nv-aviso {
+    grid-area: auto;
+  }
+  .nv-avisos .nv-avisos__lista {
+    gap: var(--nv-esp-2);
+  }
+  .nv-avisos .nv-avisos__lista > .nv-aviso,
+  .nv-avisos[data-expandido] .nv-avisos__lista > .nv-aviso,
+  .nv-avisos .nv-avisos__lista > .nv-aviso[data-saindo] {
+    transform: none;
+    transition-property: opacity;
+    transition-duration: 80ms;
+  }
+  /* Carregando: no lugar do anel girando, três pontos parados. */
+  .nv-aviso--carregando::before {
+    content: '\2026';
+    border: 0;
+    animation: none;
+  }
   @starting-style {
     .nv-modal[open] {
+      transform: none;
+    }
+    .nv-avisos .nv-avisos__lista > .nv-aviso {
       transform: none;
     }
   }
