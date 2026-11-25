@@ -301,3 +301,35 @@ test('texto em gradiente: as duas pontas com contraste AA no claro e no escuro',
     }
   }
 });
+
+// ---------- prévia e documentação ----------
+
+test('previa/efeitos.html usa só classes que existem e carrega os arquivos certos', () => {
+  const html = lerArq('previa/efeitos.html');
+  for (const arq of ['dist/nuvytech/tokens.css', 'dist/nuvytech/layout.css', 'modelos/nuvy-efeitos.js', 'modelos/nuvy-aviso.js', 'modelos/nuvy-numero.js']) {
+    assert.ok(html.includes(`../${arq}`), `a prévia não carrega ${arq}`);
+  }
+  const existentes = new Set([...css.matchAll(/\.(nv-[\w-]+)/g)].map((m) => m[1]));
+  const usadas = new Set([...html.matchAll(/class="([^"]+)"/g)].flatMap((m) => m[1].split(/\s+/)));
+  const faltando = [...usadas].filter((c) => !existentes.has(c));
+  assert.deepEqual(faltando, []);
+  for (const c of CLASSES) assert.ok(usadas.has(c), `a prévia não mostra .${c}`);
+  assert.doesNotMatch(html, /innerHTML/);
+});
+
+test('docs: efeitos.md e movimento.md existem, estão no README e citam todas as classes', () => {
+  const readme = lerArq('README.md');
+  assert.match(readme, /docs\/efeitos\.md/);
+  assert.match(readme, /docs\/movimento\.md/);
+  const efeitos = lerArq('docs/efeitos.md');
+  for (const c of CLASSES) assert.ok(efeitos.includes(`.${c}`), `efeitos.md não cita .${c}`);
+  assert.match(efeitos, /afterNextRender/);
+  const mov = lerArq('docs/movimento.md');
+  for (const t of ['--nv-mov-rapido', '--nv-mov`', '--nv-mov-curva', 'prefers-reduced-motion']) assert.ok(mov.includes(t), t);
+});
+
+test('texto em gradiente corta o reflexo com overflow: clip (sem rolagem lateral na página)', () => {
+  assert.match(css, /\.nv-texto-gradiente\s*\{[^}]*overflow:\s*clip/);
+  assert.match(css, /\.nv-botao--brilho\s*\{[^}]*overflow:\s*hidden/);
+  assert.match(css, /\.nv-borda-viva\s*\{[^}]*overflow:\s*hidden/);
+});

@@ -1561,6 +1561,8 @@ summary.nv-botao::-webkit-details-marker {
   --nv-texto-fundo: var(--background);
   position: relative;
   display: inline-block;
+  /* clip corta o reflexo sem virar caixa de rolagem: a página não ganha rolagem lateral e a linha de base fica. */
+  overflow: clip;
   clip-path: inset(0);
   color: var(--primary);
 }
