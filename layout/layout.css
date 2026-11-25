@@ -1437,7 +1437,179 @@ summary.nv-botao::-webkit-details-marker {
   }
 }
 
-/* Movimento reduzido: esqueleto parado (sem brilho); modal, aviso e menu só com um fade curto, sem deslocar nem escalar. */
+/* Efeitos (1.10.0): detalhes de movimento próprios da NuvyTech. Só animam transform e opacity; os de laço
+   longo usam variáveis (--nv-letreiro-vel) e todos têm versão parada no bloco de movimento reduzido.
+   O JS que alguns precisam está em modelos/nuvy-efeitos.js; sem ele, nada some: o conteúdo fica parado.
+   Guia em docs/movimento.md. */
+
+/* Letreiro: <div class="nv-letreiro" aria-label="..."><ul class="nv-letreiro__trilho">...</ul></div>.
+   Sem JS rola com o dedo/barra; com JS a faixa ganha uma cópia (aria-hidden) e gira sozinha. */
+.nv-letreiro {
+  --nv-letreiro-vel: 30s;
+  display: flex;
+  overflow-x: auto;
+}
+.nv-letreiro[data-pronto] {
+  overflow: hidden;
+}
+.nv-letreiro__faixa {
+  display: flex;
+  flex: none;
+  width: max-content;
+}
+.nv-letreiro[data-pronto] .nv-letreiro__faixa {
+  animation: nv-letreiro var(--nv-letreiro-vel) linear infinite;
+}
+.nv-letreiro:is(:hover, :focus-within) .nv-letreiro__faixa {
+  animation-play-state: paused;
+}
+.nv-letreiro__trilho {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--nv-esp-8);
+  margin: 0;
+  padding: 0 var(--nv-esp-8) 0 0;
+  list-style: none;
+}
+@keyframes nv-letreiro {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Borda viva: um arco de cor gira por trás de uma capa da cor do cartão; só o anel de 2px aparece. */
+.nv-borda-viva {
+  --nv-borda-cor: var(--primary);
+  --nv-borda-largura: 2px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--nv-raio-cartao);
+}
+.nv-borda-viva::before {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  left: 50%;
+  top: 50%;
+  width: 200%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: conic-gradient(from 0turn, transparent 0turn, var(--nv-borda-cor) 0.15turn, transparent 0.3turn);
+  animation: nv-gira calc(var(--nv-mov) * 20) linear infinite;
+}
+.nv-borda-viva::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: var(--nv-borda-largura);
+  border-radius: calc(var(--nv-raio-cartao) - var(--nv-borda-largura));
+  background: var(--card);
+}
+
+/* Botão com brilho: uma faixa clara passa uma vez quando o botão aparece (data-visto) e de novo no hover. */
+.nv-botao--brilho {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.nv-botao--brilho::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, color-mix(in oklab, currentColor 30%, transparent) 50%, transparent 70%);
+  opacity: 0;
+  transform: translateX(-110%);
+}
+.nv-botao--brilho[data-visto]::after {
+  animation: nv-reluz calc(var(--nv-mov) * 4) var(--nv-mov-curva) 1;
+}
+.nv-botao--brilho:hover::after {
+  animation: nv-reluz-de-novo calc(var(--nv-mov) * 4) var(--nv-mov-curva) 1;
+}
+@keyframes nv-reluz {
+  from {
+    opacity: 1;
+    transform: translateX(-110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(110%);
+  }
+}
+@keyframes nv-reluz-de-novo {
+  from {
+    opacity: 1;
+    transform: translateX(-110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(110%);
+  }
+}
+
+/* Texto em gradiente: primary até chart-4 (AA nos dois temas). Um reflexo passa duas vezes e para.
+   Dentro de cartão, ponha --nv-texto-fundo: var(--card) para o reflexo combinar com o fundo. */
+.nv-texto-gradiente {
+  --nv-texto-fundo: var(--background);
+  position: relative;
+  display: inline-block;
+  clip-path: inset(0);
+  color: var(--primary);
+}
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .nv-texto-gradiente {
+    background-image: linear-gradient(90deg, var(--primary), var(--chart-4));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+.nv-texto-gradiente::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in oklab, var(--nv-texto-fundo) 45%, transparent) 50%, transparent 70%);
+  transform: translateX(-110%);
+  animation: nv-reluz calc(var(--nv-mov) * 10) var(--nv-mov-curva) 2 both;
+}
+
+/* Palavra que gira: <span class="nv-palavra-gira" data-palavras='["sites","lojas"]'>sites</span>. */
+.nv-palavra-gira {
+  display: inline-block;
+}
+.nv-palavra-gira__visivel {
+  display: inline-grid;
+}
+.nv-palavra-gira__palavra {
+  grid-area: 1 / 1;
+  transition:
+    opacity var(--nv-mov) var(--nv-mov-curva),
+    transform var(--nv-mov) var(--nv-mov-curva);
+}
+.nv-palavra-gira__palavra[data-entrando] {
+  opacity: 0;
+  transform: translateY(0.4em);
+}
+.nv-palavra-gira__palavra[data-saindo] {
+  opacity: 0;
+  transform: translateY(-0.4em);
+}
+
+/* Cartão 3D: o JS muda --nv-inclina-x/y (no máximo 6°) só com mouse; ao sair volta a 0. */
+.nv-cartao-3d {
+  --nv-inclina-x: 0deg;
+  --nv-inclina-y: 0deg;
+  transform: perspective(900px) rotateX(var(--nv-inclina-x)) rotateY(var(--nv-inclina-y));
+  transition: transform var(--nv-mov) var(--nv-mov-curva);
+}
+
+/* Movimento reduzido: esqueleto parado (sem brilho); modal, aviso e menu só com um fade curto, sem deslocar nem escalar;
+   efeitos parados. */
 @media (prefers-reduced-motion: reduce) {
   .nv-pagina .nv-botao:is(:hover, :active),
   .nv-pagina .nv-lateral__link:hover .nv-lateral__icone {
@@ -1489,6 +1661,33 @@ summary.nv-botao::-webkit-details-marker {
     content: '\2026';
     border: 0;
     animation: none;
+  }
+  /* Efeitos: letreiro vira faixa rolável à mão, sem a cópia; o resto fica parado. */
+  .nv-letreiro[data-pronto] {
+    overflow-x: auto;
+  }
+  .nv-letreiro[data-pronto] .nv-letreiro__faixa {
+    animation: none;
+  }
+  .nv-letreiro__trilho[aria-hidden='true'] {
+    display: none;
+  }
+  .nv-borda-viva::before {
+    animation: none;
+  }
+  .nv-botao--brilho::after,
+  .nv-botao--brilho[data-visto]::after,
+  .nv-botao--brilho:hover::after,
+  .nv-texto-gradiente::before {
+    display: none;
+    animation: none;
+  }
+  .nv-palavra-gira__palavra {
+    transition: none;
+  }
+  .nv-cartao-3d {
+    transform: none;
+    transition: none;
   }
   @starting-style {
     .nv-modal[open] {
