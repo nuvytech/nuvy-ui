@@ -90,6 +90,19 @@
   left: 8px;
 }
 
+/* Só para leitor de tela: sai da tela mas continua na árvore de acessibilidade. */
+.nv-so-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Estrutura da página */
 .nv-principal {
   max-width: 1120px;
@@ -382,6 +395,48 @@
 }
 .nv-indicador--atencao .nv-indicador__valor {
   color: var(--warning);
+}
+
+/* Número animado: <span class="nv-numero" data-valor="..." data-formato='{...}'>texto pronto</span> com
+   modelos/nuvy-numero.js. Cada dígito vira uma janela de 1 linha com a pilha 0-9 (.nv-numero__coluna) que
+   rola só com transform; símbolos (R$, ponto, vírgula, %) ficam parados. Largura fixa por tabular-nums.
+   Dígito que entra ou sai (99 -> 100) aparece ou some só com opacity e scale; a largura não anima. */
+.nv-numero {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.nv-numero__visual {
+  display: inline-flex;
+  align-items: flex-end;
+}
+.nv-numero__janela,
+.nv-numero__simbolo {
+  display: inline-block;
+  height: 1.15em;
+  line-height: 1.15;
+  white-space: pre;
+  transition:
+    opacity var(--nv-mov) var(--nv-mov-curva),
+    transform var(--nv-mov) var(--nv-mov-curva);
+}
+.nv-numero__janela {
+  overflow: hidden;
+}
+.nv-numero__janela[data-entrando],
+.nv-numero__janela[data-saindo],
+.nv-numero__simbolo[data-entrando],
+.nv-numero__simbolo[data-saindo] {
+  opacity: 0;
+  transform: scale(0.6);
+}
+.nv-numero__coluna {
+  display: block;
+  transition: transform var(--nv-mov) var(--nv-mov-curva);
+}
+.nv-numero__coluna > span {
+  display: block;
+  height: 1.15em;
 }
 
 /* Botões: primário (cheio) para a ação principal, secundário (contorno) para o resto.
@@ -1190,6 +1245,7 @@ summary.nv-botao::-webkit-details-marker {
 /* Aviso flutuante (toast): ponha os .nv-aviso dentro de <div class="nv-avisos" role="region" aria-label="Avisos">.
    Entra sozinho; para sair, ponha data-saindo no aviso e remova-o ao fim da transição (transitionend). */
 .nv-avisos {
+  --nv-altura-aberta: 0px; /* o nuvy-aviso.js escreve a altura da pilha aberta */
   position: fixed;
   right: var(--nv-esp-4);
   bottom: var(--nv-esp-4);
@@ -1212,6 +1268,129 @@ summary.nv-botao::-webkit-details-marker {
   from {
     opacity: 0;
     transform: translateY(12px);
+  }
+}
+
+/* Pilha de avisos: montada por modelos/nuvy-aviso.js dentro de .nv-avisos (<ol class="nv-avisos__lista">).
+   Os avisos ficam empilhados no mesmo lugar; os de trás sobem um pouco e encolhem pela --nv-indice
+   (0 = o mais novo). Com o mouse ou o foco na pilha (data-expandido), cada um sobe a --nv-desloc
+   (altura dos mais novos) e todos ficam visíveis. Entra com @starting-style; sai com data-saindo.
+   Só opacity e transform animam. */
+.nv-avisos__lista {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nv-avisos .nv-avisos__lista > .nv-aviso {
+  /* Padrões; o nuvy-aviso.js escreve os valores de cada aviso no style dele. */
+  --nv-indice: 0;
+  --nv-desloc: 0px;
+  grid-area: 1 / 1;
+  align-self: end;
+  margin: 0;
+  padding-right: calc(var(--nv-controle) + var(--nv-esp-1));
+  z-index: calc(10 - var(--nv-indice));
+  transform: translateY(calc(var(--nv-indice) * -10px)) scale(calc(1 - var(--nv-indice) * 0.05));
+  transform-origin: bottom center;
+  touch-action: pan-y;
+  animation: none;
+  transition:
+    opacity var(--nv-mov) var(--nv-mov-curva),
+    transform var(--nv-mov) var(--nv-mov-curva);
+}
+.nv-avisos[data-expandido] .nv-avisos__lista > .nv-aviso {
+  transform: translateY(calc(var(--nv-desloc) * -1));
+}
+/* Ponte invisível com a altura da pilha aberta (--nv-altura-aberta, escrita pelo JS): sem ela o mouse cai
+   no vão entre dois avisos, sai da caixa e a pilha fecha no meio do caminho. Fica atrás dos avisos. */
+.nv-avisos[data-expandido]::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  height: var(--nv-altura-aberta);
+}
+.nv-avisos .nv-avisos__lista > .nv-aviso[data-saindo] {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+.nv-avisos .nv-avisos__lista > .nv-aviso[data-arrastando] {
+  transition: none;
+  cursor: grabbing;
+}
+@starting-style {
+  .nv-avisos .nv-avisos__lista > .nv-aviso {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+.nv-avisos .nv-avisos__lista > .nv-aviso:focus-visible {
+  outline: none;
+  box-shadow: var(--nv-foco), var(--nv-sombra);
+}
+.nv-aviso__titulo,
+.nv-aviso__texto {
+  margin: 0;
+}
+.nv-aviso__titulo {
+  font-weight: 600;
+}
+.nv-aviso__titulo[hidden] {
+  display: none;
+}
+.nv-aviso__fechar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: var(--nv-controle);
+  min-width: var(--nv-controle);
+  height: var(--nv-controle);
+  min-height: var(--nv-controle);
+  padding: 0;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: var(--nv-raio-controle);
+  cursor: pointer;
+}
+.nv-aviso__acao {
+  min-height: var(--nv-controle);
+  margin-top: var(--nv-esp-2);
+  padding: 0 var(--nv-esp-3);
+  font: inherit;
+  font-weight: 600;
+  color: inherit;
+  background: none;
+  border: 1px solid currentColor;
+  border-radius: var(--nv-raio-controle);
+  cursor: pointer;
+}
+.nv-aviso__fechar:focus-visible,
+.nv-aviso__acao:focus-visible {
+  outline: none;
+  box-shadow: var(--nv-foco);
+}
+/* Carregando (nuvyAviso.promessa): o ícone vira um anel que gira só com transform. */
+.nv-aviso--carregando::before {
+  content: '';
+  color: inherit;
+  background: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: nv-gira calc(var(--nv-mov) * 4) linear infinite;
+}
+@keyframes nv-gira {
+  to {
+    transform: rotate(1turn);
   }
 }
 
@@ -1270,7 +1449,239 @@ summary.nv-botao::-webkit-details-marker {
   }
 }
 
-/* Movimento reduzido: esqueleto parado (sem brilho); modal, aviso e menu só com um fade curto, sem deslocar nem escalar. */
+/* Efeitos (1.10.0): detalhes de movimento próprios da NuvyTech. Só animam transform e opacity; os de laço
+   longo usam variáveis (--nv-letreiro-vel) e todos têm versão parada no bloco de movimento reduzido.
+   O JS que alguns precisam está em modelos/nuvy-efeitos.js; sem ele, nada some: o conteúdo fica parado.
+   Guia em docs/movimento.md. */
+
+/* Letreiro: <div class="nv-letreiro" aria-label="..."><ul class="nv-letreiro__trilho">...</ul></div>.
+   Sem JS rola com o dedo/barra; com JS a faixa ganha uma cópia (aria-hidden), gira sozinha e ganha
+   um botão de pausar/continuar (.nv-letreiro__pausa, aria-pressed) que vale no toque e no teclado. */
+.nv-letreiro {
+  --nv-letreiro-vel: 30s;
+  position: relative;
+  display: flex;
+  overflow-x: auto;
+}
+.nv-letreiro[data-pronto] {
+  overflow: hidden;
+}
+.nv-letreiro__faixa {
+  display: flex;
+  flex: none;
+  width: max-content;
+}
+.nv-letreiro[data-pronto] .nv-letreiro__faixa {
+  animation: nv-letreiro var(--nv-letreiro-vel) linear infinite;
+}
+.nv-letreiro:is(:hover, :focus-within, [data-pausado]) .nv-letreiro__faixa {
+  animation-play-state: paused;
+}
+.nv-letreiro__pausa {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--nv-controle);
+  height: var(--nv-controle);
+  margin-block: auto;
+  padding: 0;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.nv-letreiro__pausa:hover {
+  color: var(--accent-foreground);
+  background: var(--accent);
+}
+.nv-letreiro__pausa:focus-visible {
+  outline: none;
+  box-shadow: var(--nv-foco);
+}
+/* Ícone só com CSS: duas barras (pausar) ou um triângulo (continuar, com aria-pressed="true"). */
+.nv-letreiro__pausa::before {
+  content: '';
+  box-sizing: border-box;
+  width: 10px;
+  height: 12px;
+  border-inline: 3px solid currentColor;
+}
+.nv-letreiro__pausa[aria-pressed='true']::before {
+  width: 0;
+  height: 0;
+  margin-inline-start: 3px;
+  border-style: solid;
+  border-width: 6px 0 6px 10px;
+  border-color: transparent transparent transparent currentColor;
+}
+.nv-letreiro__trilho {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--nv-esp-8);
+  margin: 0;
+  padding: 0 var(--nv-esp-8) 0 0;
+  list-style: none;
+}
+@keyframes nv-letreiro {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* Borda viva: um arco de cor gira por trás de uma capa da cor do cartão; só o anel de 2px aparece. */
+.nv-borda-viva {
+  --nv-borda-cor: var(--primary);
+  --nv-borda-largura: 2px;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: var(--nv-raio-cartao);
+}
+.nv-borda-viva::before {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  left: 50%;
+  top: 50%;
+  width: 200%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  background: conic-gradient(from 0turn, transparent 0turn, var(--nv-borda-cor) 0.15turn, transparent 0.3turn);
+  animation: nv-gira calc(var(--nv-mov) * 20) linear infinite;
+}
+.nv-borda-viva::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: var(--nv-borda-largura);
+  border-radius: calc(var(--nv-raio-cartao) - var(--nv-borda-largura));
+  background: var(--card);
+}
+
+/* Botão com brilho: uma faixa clara passa uma vez quando o botão aparece (data-visto) e de novo no hover. */
+.nv-botao--brilho {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.nv-botao--brilho::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, color-mix(in oklab, currentColor 30%, transparent) 50%, transparent 70%);
+  opacity: 0;
+  transform: translateX(-110%);
+}
+.nv-botao--brilho[data-visto]::after {
+  animation: nv-reluz calc(var(--nv-mov) * 4) var(--nv-mov-curva) 1;
+}
+.nv-botao--brilho:hover::after {
+  animation: nv-reluz-de-novo calc(var(--nv-mov) * 4) var(--nv-mov-curva) 1;
+}
+@keyframes nv-reluz {
+  from {
+    opacity: 1;
+    transform: translateX(-110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(110%);
+  }
+}
+@keyframes nv-reluz-de-novo {
+  from {
+    opacity: 1;
+    transform: translateX(-110%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(110%);
+  }
+}
+
+/* Texto em gradiente: primary até chart-4 (AA nos dois temas). Um reflexo passa duas vezes e para.
+   Dentro de cartão, ponha --nv-texto-fundo: var(--card) para o reflexo combinar com o fundo. */
+.nv-texto-gradiente {
+  --nv-texto-fundo: var(--background);
+  position: relative;
+  display: inline-block;
+  /* clip corta o reflexo sem virar caixa de rolagem: a página não ganha rolagem lateral e a linha de base fica. */
+  overflow: clip;
+  clip-path: inset(0);
+  color: var(--primary);
+}
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .nv-texto-gradiente {
+    background-image: linear-gradient(90deg, var(--primary), var(--chart-4));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+.nv-texto-gradiente::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, color-mix(in oklab, var(--nv-texto-fundo) 45%, transparent) 50%, transparent 70%);
+  transform: translateX(-110%);
+  animation: nv-reluz calc(var(--nv-mov) * 10) var(--nv-mov-curva) 2 both;
+}
+/* Alto contraste do Windows: o gradiente some e o texto usa a cor do sistema, senão ficaria invisível. */
+@media (forced-colors: active) {
+  .nv-texto-gradiente {
+    background: none;
+    color: CanvasText;
+    -webkit-text-fill-color: currentColor;
+  }
+  .nv-texto-gradiente::before {
+    display: none;
+  }
+}
+
+/* Palavra que gira: <span class="nv-palavra-gira" data-palavras='["sites","lojas"]'>sites</span>. */
+.nv-palavra-gira {
+  display: inline-block;
+}
+.nv-palavra-gira__visivel {
+  display: inline-grid;
+}
+.nv-palavra-gira__palavra {
+  grid-area: 1 / 1;
+  transition:
+    opacity var(--nv-mov) var(--nv-mov-curva),
+    transform var(--nv-mov) var(--nv-mov-curva);
+}
+.nv-palavra-gira__palavra[data-entrando] {
+  opacity: 0;
+  transform: translateY(0.4em);
+}
+.nv-palavra-gira__palavra[data-saindo] {
+  opacity: 0;
+  transform: translateY(-0.4em);
+}
+
+/* Cartão 3D: o JS muda --nv-inclina-x/y (no máximo 6°) só com mouse; ao sair volta a 0.
+   O transform só existe enquanto o mouse inclina (data-inclinado): parado, o cartão não tem transform
+   próprio, então não apaga o transform de outra classe nem prende filhos position: fixed (menus). */
+.nv-cartao-3d {
+  --nv-inclina-x: 0deg;
+  --nv-inclina-y: 0deg;
+}
+.nv-cartao-3d[data-inclinado] {
+  transform: perspective(900px) rotateX(var(--nv-inclina-x)) rotateY(var(--nv-inclina-y));
+  transition: transform var(--nv-mov) var(--nv-mov-curva);
+}
+
+/* Movimento reduzido: esqueleto parado (sem brilho); modal, aviso e menu só com um fade curto, sem deslocar nem escalar;
+   efeitos parados. */
 @media (prefers-reduced-motion: reduce) {
   .nv-pagina .nv-botao:is(:hover, :active),
   .nv-pagina .nv-lateral__link:hover .nv-lateral__icone {
@@ -1297,8 +1708,65 @@ summary.nv-botao::-webkit-details-marker {
     animation-name: nv-fade;
     animation-duration: 80ms;
   }
+  /* Número animado: o JS já troca só o texto; aqui garante que nada role se as colunas existirem. */
+  .nv-numero__coluna,
+  .nv-numero__janela,
+  .nv-numero__simbolo {
+    transition: none;
+  }
+  /* Pilha de avisos: um embaixo do outro, sem deslocar nem encolher; só o fade curto. */
+  .nv-avisos .nv-avisos__lista > .nv-aviso {
+    grid-area: auto;
+  }
+  .nv-avisos .nv-avisos__lista {
+    gap: var(--nv-esp-2);
+  }
+  .nv-avisos .nv-avisos__lista > .nv-aviso,
+  .nv-avisos[data-expandido] .nv-avisos__lista > .nv-aviso,
+  .nv-avisos .nv-avisos__lista > .nv-aviso[data-saindo] {
+    transform: none;
+    transition-property: opacity;
+    transition-duration: 80ms;
+  }
+  /* Carregando: no lugar do anel girando, três pontos parados. */
+  .nv-aviso--carregando::before {
+    content: '\2026';
+    border: 0;
+    animation: none;
+  }
+  /* Efeitos: letreiro vira faixa rolável à mão, sem a cópia; o resto fica parado. */
+  .nv-letreiro[data-pronto] {
+    overflow-x: auto;
+  }
+  .nv-letreiro[data-pronto] .nv-letreiro__faixa {
+    animation: none;
+  }
+  .nv-letreiro__trilho[aria-hidden='true'],
+  .nv-letreiro__pausa {
+    display: none;
+  }
+  .nv-borda-viva::before {
+    animation: none;
+  }
+  .nv-botao--brilho::after,
+  .nv-botao--brilho[data-visto]::after,
+  .nv-botao--brilho:hover::after,
+  .nv-texto-gradiente::before {
+    display: none;
+    animation: none;
+  }
+  .nv-palavra-gira__palavra {
+    transition: none;
+  }
+  .nv-cartao-3d[data-inclinado] {
+    transform: none;
+    transition: none;
+  }
   @starting-style {
     .nv-modal[open] {
+      transform: none;
+    }
+    .nv-avisos .nv-avisos__lista > .nv-aviso {
       transform: none;
     }
   }

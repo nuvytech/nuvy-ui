@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Efeitos e movimento — prévia</title>
+  <!-- Prévia dos efeitos de vitrine, da pilha de avisos e do número animado, com dados fictícios.
+       Parâmetro: ?tema=claro|escuro. Para ver o movimento reduzido, ligue "reduzir movimento" no sistema. -->
+  <link rel="stylesheet" href="../dist/nuvytech/tokens.css">
+  <link rel="stylesheet" href="../dist/nuvytech/layout.css">
+  <script>
+    (function () {
+      var claro = new URLSearchParams(location.search).get('tema') === 'claro';
+      document.documentElement.classList.toggle('dark', !claro);
+      document.documentElement.style.colorScheme = claro ? 'light' : 'dark';
+    })();
+  </script>
+  <script src="../modelos/nuvy-efeitos.js" defer></script>
+  <script src="../modelos/nuvy-aviso.js" defer></script>
+  <script type="module" src="../modelos/nuvy-numero.js"></script>
+</head>
+<body>
+  <main class="nv-pagina">
+    <h1 class="nv-titulo-pagina">
+      Fazemos <span class="nv-palavra-gira" data-palavras='["sites","lojas","apps"]'>sites</span>
+      para <span class="nv-texto-gradiente">pequenas empresas</span>
+    </h1>
+
+    <p>
+      <a class="nv-botao nv-botao--grande nv-botao--brilho" href="#planos">Quero meu site</a>
+      <button class="nv-botao nv-botao--secundario" type="button" id="salvar">Mostrar aviso</button>
+    </p>
+
+    <div class="nv-letreiro" role="region" aria-label="Clientes atendidos (exemplo)">
+      <ul class="nv-letreiro__trilho">
+        <li>Padaria Sol</li>
+        <li>Oficina Lua</li>
+        <li>Clínica Mar</li>
+        <li>Pet Estrela</li>
+        <li>Mercado Rio</li>
+        <li><a href="#planos">Ver planos</a></li>
+      </ul>
+    </div>
+
+    <div class="nv-grade" id="planos">
+      <article class="nv-cartao nv-borda-viva">
+        <h2>Borda viva</h2>
+        <p>O brilho dá a volta na borda. Com movimento reduzido fica parado.</p>
+      </article>
+      <article class="nv-cartao nv-cartao-3d">
+        <h2>Cartão 3D</h2>
+        <p>Passe o mouse: inclina até 6°. No celular fica reto.</p>
+      </article>
+      <article class="nv-cartao">
+        <h2><span class="nv-texto-gradiente" style="--nv-texto-fundo: var(--card)">Gradiente no cartão</span></h2>
+        <p>Dentro de cartão o reflexo usa a cor do cartão.</p>
+      </article>
+    </div>
+
+    <div class="nv-indicadores">
+      <div class="nv-indicador">
+        <span class="nv-indicador__nome">Faturamento (exemplo)</span>
+        <span class="nv-indicador__valor">
+          <span class="nv-numero" data-nome="faturamento" data-valor="1234.5" data-formato='{"estilo":"moeda"}'>R$&nbsp;1.234,50</span>
+        </span>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('salvar').addEventListener('click', function () {
+      nuvyAviso.promessa(new Promise(function (ok) { setTimeout(ok, 1200); }), {
+        carregando: 'Salvando…',
+        sucesso: 'Alterações salvas.',
+        erro: 'Não foi possível salvar.',
+      }).then(function () {
+        var el = document.querySelector('[data-nome="faturamento"]');
+        if (window.nuvyNumero) nuvyNumero.atualizar(el, 1580.9);
+      });
+    });
+  </script>
+</body>
+</html>
