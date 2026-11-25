@@ -1447,9 +1447,11 @@ summary.nv-botao::-webkit-details-marker {
    Guia em docs/movimento.md. */
 
 /* Letreiro: <div class="nv-letreiro" aria-label="..."><ul class="nv-letreiro__trilho">...</ul></div>.
-   Sem JS rola com o dedo/barra; com JS a faixa ganha uma cópia (aria-hidden) e gira sozinha. */
+   Sem JS rola com o dedo/barra; com JS a faixa ganha uma cópia (aria-hidden), gira sozinha e ganha
+   um botão de pausar/continuar (.nv-letreiro__pausa, aria-pressed) que vale no toque e no teclado. */
 .nv-letreiro {
   --nv-letreiro-vel: 30s;
+  position: relative;
   display: flex;
   overflow-x: auto;
 }
@@ -1464,8 +1466,49 @@ summary.nv-botao::-webkit-details-marker {
 .nv-letreiro[data-pronto] .nv-letreiro__faixa {
   animation: nv-letreiro var(--nv-letreiro-vel) linear infinite;
 }
-.nv-letreiro:is(:hover, :focus-within) .nv-letreiro__faixa {
+.nv-letreiro:is(:hover, :focus-within, [data-pausado]) .nv-letreiro__faixa {
   animation-play-state: paused;
+}
+.nv-letreiro__pausa {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: var(--nv-controle);
+  height: var(--nv-controle);
+  margin-block: auto;
+  padding: 0;
+  color: var(--foreground);
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.nv-letreiro__pausa:hover {
+  color: var(--accent-foreground);
+  background: var(--accent);
+}
+.nv-letreiro__pausa:focus-visible {
+  outline: none;
+  box-shadow: var(--nv-foco);
+}
+/* Ícone só com CSS: duas barras (pausar) ou um triângulo (continuar, com aria-pressed="true"). */
+.nv-letreiro__pausa::before {
+  content: '';
+  box-sizing: border-box;
+  width: 10px;
+  height: 12px;
+  border-inline: 3px solid currentColor;
+}
+.nv-letreiro__pausa[aria-pressed='true']::before {
+  width: 0;
+  height: 0;
+  margin-inline-start: 3px;
+  border-style: solid;
+  border-width: 6px 0 6px 10px;
+  border-color: transparent transparent transparent currentColor;
 }
 .nv-letreiro__trilho {
   display: flex;
@@ -1583,6 +1626,17 @@ summary.nv-botao::-webkit-details-marker {
   transform: translateX(-110%);
   animation: nv-reluz calc(var(--nv-mov) * 10) var(--nv-mov-curva) 2 both;
 }
+/* Alto contraste do Windows: o gradiente some e o texto usa a cor do sistema, senão ficaria invisível. */
+@media (forced-colors: active) {
+  .nv-texto-gradiente {
+    background: none;
+    color: CanvasText;
+    -webkit-text-fill-color: currentColor;
+  }
+  .nv-texto-gradiente::before {
+    display: none;
+  }
+}
 
 /* Palavra que gira: <span class="nv-palavra-gira" data-palavras='["sites","lojas"]'>sites</span>. */
 .nv-palavra-gira {
@@ -1606,10 +1660,14 @@ summary.nv-botao::-webkit-details-marker {
   transform: translateY(-0.4em);
 }
 
-/* Cartão 3D: o JS muda --nv-inclina-x/y (no máximo 6°) só com mouse; ao sair volta a 0. */
+/* Cartão 3D: o JS muda --nv-inclina-x/y (no máximo 6°) só com mouse; ao sair volta a 0.
+   O transform só existe enquanto o mouse inclina (data-inclinado): parado, o cartão não tem transform
+   próprio, então não apaga o transform de outra classe nem prende filhos position: fixed (menus). */
 .nv-cartao-3d {
   --nv-inclina-x: 0deg;
   --nv-inclina-y: 0deg;
+}
+.nv-cartao-3d[data-inclinado] {
   transform: perspective(900px) rotateX(var(--nv-inclina-x)) rotateY(var(--nv-inclina-y));
   transition: transform var(--nv-mov) var(--nv-mov-curva);
 }
@@ -1675,7 +1733,8 @@ summary.nv-botao::-webkit-details-marker {
   .nv-letreiro[data-pronto] .nv-letreiro__faixa {
     animation: none;
   }
-  .nv-letreiro__trilho[aria-hidden='true'] {
+  .nv-letreiro__trilho[aria-hidden='true'],
+  .nv-letreiro__pausa {
     display: none;
   }
   .nv-borda-viva::before {
@@ -1691,7 +1750,7 @@ summary.nv-botao::-webkit-details-marker {
   .nv-palavra-gira__palavra {
     transition: none;
   }
-  .nv-cartao-3d {
+  .nv-cartao-3d[data-inclinado] {
     transform: none;
     transition: none;
   }
