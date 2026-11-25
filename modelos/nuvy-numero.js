@@ -42,8 +42,7 @@ function iniciar() {
       nos: new Map(),
     };
     estados.set(el, estado);
-    const texto = estado.valor !== null ? formatar(estado.valor, estado.opcoes, estado.locale) : el.textContent.trim();
-    if (texto) el.setAttribute('aria-label', texto);
+    // Sem aria-label no <span>: o leitor de tela lê o texto (o do servidor ou o .nv-so-leitor).
     // Montado pelo cliente (sem texto pronto): já cria as colunas.
     if (!el.textContent.trim() && estado.valor !== null) construir(el, estado, estado.valor);
     return estado;
@@ -99,14 +98,15 @@ function iniciar() {
     estado.leitor = leitor;
   }
 
-  function aplicar(el, estado, valor) {
+  // Fase 1 (só escritas): monta o estado inicial da troca. Devolve a fase 2, que roda depois de uma
+  // leitura de layout, ou null quando não há animação (movimento reduzido: troca o texto e pronto).
+  function preparar(el, estado, valor) {
     const texto = formatar(valor, estado.opcoes, estado.locale);
-    el.setAttribute('aria-label', texto);
     if (!animavel()) {
       el.textContent = texto;
       estado.visual = null;
       estado.valor = valor;
-      return;
+      return null;
     }
     if (!estado.visual || !el.contains(estado.visual)) construir(el, estado, estado.valor ?? valor);
     estado.leitor.textContent = texto;
@@ -137,21 +137,32 @@ function iniciar() {
       if (cursor === no.el) cursor = cursor.nextSibling;
       else estado.visual.insertBefore(no.el, cursor);
     }
-    // Lê a largura para o navegador registrar o estado inicial antes de mudar (senão não há transição).
-    void estado.visual.offsetWidth;
-    for (const p of novas) posicionar(estado.nos.get(p.chave), p.texto);
-    for (const no of entrando) no.el.removeAttribute('data-entrando');
     estado.valor = valor;
+    // Fase 2: rola até o dígito novo e mostra quem entrou.
+    return () => {
+      for (const p of novas) posicionar(estado.nos.get(p.chave), p.texto);
+      for (const no of entrando) no.el.removeAttribute('data-entrando');
+    };
+  }
+
+  // Lê a largura uma vez para o navegador registrar o estado inicial antes de mudar (senão não há transição).
+  function terminar(fins) {
+    const ativos = fins.filter((f) => f);
+    if (!ativos.length) return;
+    void (document.body || document.documentElement).offsetWidth;
+    for (const f of ativos) f();
+  }
+
+  function validar(valor) {
+    if (valido(valor)) return true;
+    console.warn('nuvy-numero: valor inválido ignorado (use um número finito):', String(valor));
+    return false;
   }
 
   function atualizar(el, valor) {
     const estado = montar(el);
-    if (!estado) return;
-    if (!valido(valor)) {
-      console.warn('nuvy-numero: valor inválido ignorado (use um número finito):', String(valor));
-      return;
-    }
-    aplicar(el, estado, valor);
+    if (!estado || !validar(valor)) return;
+    terminar([preparar(el, estado, valor)]);
   }
 
   // Atualiza vários números no mesmo quadro: o card muda todo junto.
@@ -161,7 +172,15 @@ function iniciar() {
     const els = Array.prototype.slice.call(raiz.querySelectorAll('.nv-numero'));
     const pares = els.map((el, i) => [el, Array.isArray(valores) ? valores[i] : valores[el.getAttribute('data-nome')]])
       .filter(([, v]) => v !== undefined);
-    const rodar = () => { for (const [el, v] of pares) atualizar(el, v); };
+    // Todas as escritas primeiro, uma só leitura de layout, depois as escritas finais (sem vaivém de layout).
+    const rodar = () => {
+      const fins = [];
+      for (const [el, v] of pares) {
+        const estado = montar(el);
+        if (estado && validar(v)) fins.push(preparar(el, estado, v));
+      }
+      terminar(fins);
+    };
     if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(rodar);
     else rodar();
   }

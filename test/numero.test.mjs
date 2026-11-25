@@ -56,12 +56,13 @@ test('formato inválido não quebra: cai no decimal', () => {
   assert.equal(formatar(1234, { agrupar: false }), '1234');
 });
 
-test('montar (no cliente): uma coluna por dígito, tudo aria-hidden, aria-label igual ao texto formatado', () => {
+test('montar (no cliente): uma coluna por dígito, tudo aria-hidden, texto formatado no .nv-so-leitor e sem aria-label', () => {
   const amb = carregar();
   const el = numero(amb, { 'data-valor': '1234.5', 'data-formato': '{"estilo":"moeda"}' });
   amb.ctx.nuvyNumero.montar(el);
   const esperado = formatar(1234.5, { estilo: 'moeda' });
-  assert.equal(el.getAttribute('aria-label'), esperado);
+  // aria-label num <span> genérico não é confiável (ARIA 1.2): quem fala é o .nv-so-leitor.
+  assert.equal(el.hasAttribute('aria-label'), false);
   const cols = colunas(el);
   assert.equal(cols.length, partes(1234.5, { estilo: 'moeda' }).filter((p) => p.tipo === 'digito').length);
   for (const c of cols) {
@@ -87,7 +88,7 @@ test('atualizar: só a coluna que mudou rola e o leitor recebe o texto novo', ()
   assert.equal(depois.length, antes.length);
   for (let i = 0; i < antes.length; i++) assert.equal(depois[i], antes[i], 'a coluna foi recriada');
   assert.equal(depois[3].style.transform, 'translateY(-50%)');
-  assert.equal(el.getAttribute('aria-label'), formatar(1235));
+  assert.equal(el.hasAttribute('aria-label'), false);
   assert.equal(el.querySelector('.nv-so-leitor').textContent, formatar(1235));
 });
 
@@ -120,7 +121,7 @@ test('data-formato que não é JSON gera aviso e usa o decimal', () => {
   const amb = carregar();
   const el = numero(amb, { 'data-valor': '1234', 'data-formato': '{quebrado' });
   amb.ctx.nuvyNumero.montar(el);
-  assert.equal(el.getAttribute('aria-label'), formatar(1234));
+  assert.equal(el.querySelector('.nv-so-leitor').textContent, formatar(1234));
   assert.equal(amb.avisosConsole.length, 1);
 });
 
@@ -132,7 +133,7 @@ test('movimento reduzido: atualizar só troca o textContent, sem colunas', () =>
   assert.equal(el.childNodes.length, 1);
   assert.equal(el.childNodes[0].nodeType, 3);
   assert.equal(colunas(el).length, 0);
-  assert.equal(el.getAttribute('aria-label'), '11');
+  assert.equal(el.hasAttribute('aria-label'), false);
 });
 
 test('sem innerHTML: o fonte não usa HTML em texto (o DOM falso também lança se usar)', () => {

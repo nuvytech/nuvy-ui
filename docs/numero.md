@@ -13,8 +13,10 @@ roda no navegador e no Node) + `modelos/nuvy-numero-servidor.mjs` (HTML pronto n
 - Cada dígito é uma janela de uma linha com a pilha 0–9; a pilha sobe com `transform: translateY()`.
 - Dígito que entra ou sai (99 → 100) aparece ou some só com `opacity` e `scale`; a largura não anima.
 - Largura fixa por dígito com `font-variant-numeric: tabular-nums`: o número não "dança".
-- Acessibilidade: a raiz recebe `aria-label` com o texto formatado e um `span.nv-so-leitor` com o mesmo texto;
+- Acessibilidade: a raiz **não** recebe `aria-label` (num `<span>` comum ele não é confiável). Quem fala é o
+  texto: o que veio do servidor ou, depois da 1ª atualização, um `span.nv-so-leitor` com o texto formatado;
   todas as colunas têm `aria-hidden="true"`. O leitor de tela lê "R$ 1.234,50", nunca "0 1 2 3 4 5 6 7 8 9".
+- `grupo()` faz todas as escritas, lê o layout **uma vez só** e então rola todos os números (sem vaivém de layout).
 - Movimento reduzido (`prefers-reduced-motion: reduce`): `atualizar` só troca o `textContent`.
 - Valor inválido (`NaN`, `Infinity`, texto) é ignorado com um `console.warn`; o que está na tela fica.
 - Todo texto entra por `textContent`/`createTextNode`. Nada de `innerHTML`.
