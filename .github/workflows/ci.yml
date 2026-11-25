@@ -13,14 +13,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  escolher-runner:
-    uses: nuvytech/nuvy-ci/.github/workflows/escolher-runner.yml@96aeb4af629aef350b1e079325958f3438b6d2a7
-    secrets:
-      CI_RUNNERS_TOKEN: ${{ secrets.CI_ESCOLHER_RUNNER_TOKEN }}
-
   testes:
-    needs: escolher-runner
-    runs-on: ${{ fromJSON(needs.escolher-runner.outputs.runs_on) }}
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
