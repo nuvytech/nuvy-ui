@@ -17,12 +17,38 @@ test('cria a região "Avisos" com duas regiões vivas (educada e assertiva)', ()
   for (const n of ['polite', 'assertive']) assert.ok(a.regiao(n).classList.contains('nv-so-leitor'));
 });
 
-test('reaproveita a .nv-avisos que já existe na página', () => {
+test('cria a caixa e as regiões vivas já na carga, antes do primeiro aviso', () => {
   const a = carregarAviso();
-  const existente = a.document.createElement('div');
-  existente.className = 'nv-avisos';
-  existente.setAttribute('aria-label', 'Mensagens');
-  a.document.body.appendChild(existente);
+  assert.ok(a.caixa(), 'a caixa devia existir antes de qualquer aviso');
+  assert.equal(a.regiao('polite').getAttribute('aria-live'), 'polite');
+  assert.equal(a.regiao('assertive').getAttribute('aria-live'), 'assertive');
+  assert.equal(a.itens().length, 0);
+});
+
+test('primeiro anúncio espera as regiões vivas recém-criadas; fica o último de cada nível', () => {
+  const a = carregarAviso({ recemCarregada: true });
+  const primeiro = a.api.sucesso('primeiro');
+  a.api.sucesso('segundo');
+  a.api.erro('falhou');
+  assert.equal(a.regiao('polite').textContent, '', 'escrever na hora seria perdido pelo leitor de tela');
+  assert.equal(a.regiao('assertive').textContent, '');
+  assert.equal(a.itens().length, 3, 'o aviso aparece na tela na hora');
+  a.clock.avancar(100);
+  assert.equal(a.regiao('polite').textContent, 'segundo');
+  assert.equal(a.regiao('assertive').textContent, 'falhou');
+  a.api.fechar(primeiro); // abre vaga: o 4º aviso iria para a fila, sem anúncio
+  a.api.sucesso('terceiro');
+  assert.equal(a.regiao('polite').textContent, 'terceiro', 'depois de prontas, anuncia na hora');
+});
+
+test('reaproveita a .nv-avisos que já existe na página', () => {
+  let existente;
+  const a = carregarAviso({}, (doc) => {
+    existente = doc.createElement('div');
+    existente.className = 'nv-avisos';
+    existente.setAttribute('aria-label', 'Mensagens');
+    doc.body.appendChild(existente);
+  });
   a.api.sucesso('Salvo');
   assert.equal(a.document.querySelectorAll('.nv-avisos').length, 1);
   assert.equal(existente.getAttribute('aria-label'), 'Mensagens');
@@ -102,14 +128,17 @@ test('"<b>x</b>" aparece como texto, sem virar tag', () => {
   assert.equal(li.querySelectorAll('b').length + li.querySelectorAll('img').length, 0);
 });
 
-test('Alt+T leva o foco ao aviso mais novo; Esc fecha e devolve o foco', () => {
+test('Alt+A leva o foco ao aviso mais novo; Esc fecha e devolve o foco', () => {
   const a = carregarAviso();
   const campo = a.document.createElement('input');
   a.document.body.appendChild(campo);
   campo.focus();
   a.api.mostrar({ texto: 'velho', duracao: Infinity });
   const novo = a.api.mostrar({ texto: 'novo', duracao: Infinity });
-  const ev = a.novoEvento('keydown', { key: 't', code: 'KeyT', altKey: true });
+  const velho = a.novoEvento('keydown', { key: 't', code: 'KeyT', altKey: true });
+  a.document.dispatchEvent(velho);
+  assert.equal(velho.defaultPrevented, false, 'Alt+T é do menu Ferramentas do Firefox');
+  const ev = a.novoEvento('keydown', { key: 'å', code: 'KeyA', altKey: true });
   a.document.dispatchEvent(ev);
   assert.equal(ev.defaultPrevented, true);
   assert.equal(a.document.activeElement, a.item(novo));
@@ -118,9 +147,9 @@ test('Alt+T leva o foco ao aviso mais novo; Esc fecha e devolve o foco', () => {
   assert.ok(a.item(novo).hasAttribute('data-saindo'));
   assert.equal(a.document.activeElement, campo);
   assert.equal(a.caixa().hasAttribute('data-expandido'), false);
-  // Alt+T sem nenhum aviso não faz nada.
+  // Alt+A sem nenhum aviso não faz nada.
   const b = carregarAviso();
-  const ev2 = b.novoEvento('keydown', { key: 't', altKey: true });
+  const ev2 = b.novoEvento('keydown', { key: 'a', altKey: true });
   b.document.dispatchEvent(ev2);
   assert.equal(ev2.defaultPrevented, false);
 });
@@ -240,4 +269,18 @@ test('contraste do texto de cada tipo sobre o fundo do aviso ≥ 4.5 no claro e 
       assert.ok(r >= 4.5, `${nome} no ${modo}: ${r.toFixed(2)}`);
     }
   }
+});
+
+test('pilha aberta: --nv-altura-aberta na caixa e ponte ::before para o mouse não cair nos vãos', () => {
+  const a = carregarAviso();
+  for (const t of ['um', 'dois', 'três']) a.item(a.api.mostrar({ texto: t, duracao: Infinity })).altura = 60;
+  a.evento(a.caixa(), 'pointerenter', { bubbles: false });
+  assert.ok(a.caixa().hasAttribute('data-expandido'));
+  // 3 avisos de 60 px com 2 vãos de 8 px.
+  assert.equal(a.caixa().style.getPropertyValue('--nv-altura-aberta'), '196px');
+  const ponte = regras().find((r) => r.seletor === '.nv-avisos[data-expandido]::before');
+  assert.ok(ponte, 'falta a ponte da pilha aberta');
+  assert.match(ponte.corpo, /height:\s*var\(--nv-altura-aberta/);
+  assert.match(ponte.corpo, /z-index:\s*-1/);
+  assert.match(ponte.corpo, /bottom:\s*0/);
 });

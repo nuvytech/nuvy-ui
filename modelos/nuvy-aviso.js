@@ -5,9 +5,13 @@
      promessa(promise, { carregando, sucesso, erro }) -> a mesma promise
      fechar(id), limpar()
    tipo: info (padrão), sucesso, atencao, erro. duracao em ms (padrão 5000; Infinity fica até fechar).
-   Até 3 avisos na tela; o resto espera na fila. Alt+T leva o foco ao aviso mais novo; Esc fecha o aviso
-   focado e devolve o foco para onde estava. Arrastar para o lado dispensa. O tempo para enquanto a pilha
-   está aberta (mouse ou foco), durante o arraste e com a aba escondida, e continua de onde parou.
+   Até 3 avisos na tela; o resto espera na fila. Alt+A leva o foco ao aviso mais novo (Alt+T abriria o menu
+   Ferramentas do Firefox); Esc fecha o aviso focado e devolve o foco para onde estava. Arrastar para o lado
+   dispensa. O tempo para enquanto a pilha está aberta (mouse ou foco), durante o arraste e com a aba
+   escondida, e continua de onde parou.
+   A caixa e as regiões vivas são criadas assim que a página carrega (ou use uma .nv-avisos já no HTML): o
+   leitor de tela só anuncia mudanças numa região viva que já existia antes, por isso o primeiro anúncio
+   depois de criar as regiões espera um pouco.
    Todo texto entra por textContent: nada de HTML vindo de fora. */
 (function () {
   'use strict';
@@ -19,8 +23,10 @@
   const DURACAO_PADRAO = 5000;
   const VAO = 8; // espaço entre avisos com a pilha aberta (px)
   const ARRASTE_MINIMO = 5; // abaixo disso é toque, não arraste (px)
-  const ARRASTE_FRACAO = 0.45; // passou de 45% da largura: dispensa
-  const ARRASTE_VELOCIDADE = 0.11; // ou foi rápido (px/ms): dispensa
+  const ARRASTE_FRACAO = 0.35; // passou de 35% da largura: dispensa
+  const ARRASTE_VELOCIDADE = 0.5; // ou foi um peteleco (px/ms, na média do gesto)...
+  const ARRASTE_PETELECO = 24; // ...de pelo menos isso (px), para um tremido não dispensar
+  const ATRASO_ANUNCIO = 100; // ms entre criar as regiões vivas e o primeiro anúncio
   const FALHA = 'Algo deu errado.';
   const PADROES = { carregando: 'Carregando…', sucesso: 'Pronto.', erro: FALHA };
 
@@ -32,6 +38,9 @@
   let caixa = null;
   let lista = null;
   const anuncio = {};
+  const pendente = {}; // nível -> texto esperando as regiões vivas ficarem prontas
+  let anuncioLivreEm = 0; // agora() a partir do qual dá para anunciar
+  let esperaAnuncio = null;
   let focoAnterior = null;
   let ponteiroDentro = false;
   let focoDentro = false;
@@ -58,6 +67,7 @@
         r.setAttribute('aria-live', nivel);
         r.setAttribute('aria-atomic', 'true');
         caixa.insertBefore(r, caixa.firstChild);
+        anuncioLivreEm = agora() + ATRASO_ANUNCIO;
       }
       anuncio[nivel] = r;
     }
@@ -90,11 +100,26 @@
 
   function anunciar(reg) {
     const nivel = ASSERTIVOS.includes(reg.tipo) ? 'assertive' : 'polite';
-    const r = anuncio[nivel];
-    r.textContent = '';
-    const s = document.createElement('span');
-    s.textContent = [reg.titulo, reg.texto].filter(Boolean).join('. ');
-    r.appendChild(s);
+    pendente[nivel] = [reg.titulo, reg.texto].filter(Boolean).join('. ');
+    const falta = anuncioLivreEm - agora();
+    if (falta > 0) {
+      // Região viva recém-criada: escrever agora seria perdido. Espera e escreve o último de cada nível.
+      if (esperaAnuncio === null) esperaAnuncio = setTimeout(escreverAnuncios, falta);
+      return;
+    }
+    escreverAnuncios();
+  }
+
+  function escreverAnuncios() {
+    esperaAnuncio = null;
+    for (const nivel of Object.keys(pendente)) {
+      const r = anuncio[nivel];
+      r.textContent = '';
+      const s = document.createElement('span');
+      s.textContent = pendente[nivel];
+      r.appendChild(s);
+      delete pendente[nivel];
+    }
   }
 
   function texto(v) {
@@ -167,6 +192,8 @@
       reg.el.style.setProperty('--nv-desloc', `${desloc}px`);
       desloc += (reg.el.offsetHeight || 0) + VAO;
     });
+    // Altura da pilha aberta, para a ponte (::before) que segura o mouse nos vãos entre avisos.
+    if (caixa) caixa.style.setProperty('--nv-altura-aberta', `${Math.max(0, desloc - VAO)}px`);
   }
 
   function atualizarAberta() {
@@ -258,7 +285,8 @@
       li.removeAttribute('data-arrastando');
       const largura = li.offsetWidth || 1;
       const velocidade = Math.abs(dx) / Math.max(1, agora() - t);
-      if (!cancelou && (Math.abs(dx) >= largura * ARRASTE_FRACAO || velocidade > ARRASTE_VELOCIDADE)) {
+      const peteleco = Math.abs(dx) >= ARRASTE_PETELECO && velocidade > ARRASTE_VELOCIDADE;
+      if (!cancelou && (Math.abs(dx) >= largura * ARRASTE_FRACAO || peteleco)) {
         li.style.transform = `translateX(${dx < 0 ? -largura : largura}px)`;
         li.style.opacity = '0';
         fechar(reg.id);
@@ -387,15 +415,21 @@
     return p;
   }
 
-  // Alt+T: foco no aviso mais novo.
+  // Alt+A: foco no aviso mais novo. O code (tecla física) vale em qualquer layout, inclusive no Mac, onde
+  // Option+A gera "å"; o key "a" cobre navegador sem code.
   document.addEventListener('keydown', (e) => {
-    if (!e.altKey || !(e.code === 'KeyT' || (typeof e.key === 'string' && e.key.toLowerCase() === 't'))) return;
+    if (!e.altKey || e.ctrlKey || e.metaKey) return;
+    if (!(e.code === 'KeyA' || (typeof e.key === 'string' && e.key.toLowerCase() === 'a'))) return;
     const novo = visiveis[0];
     if (!novo) return;
     e.preventDefault();
     if (!caixa.contains(document.activeElement)) focoAnterior = document.activeElement;
     novo.el.focus();
   });
+
+  // Cria a caixa e as regiões vivas já na carga, para estarem prontas quando o primeiro aviso chegar.
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', garantirCaixa);
+  else if (document.body) garantirCaixa();
 
   window.nuvyAviso = {
     mostrar,

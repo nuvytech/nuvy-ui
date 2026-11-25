@@ -10,12 +10,19 @@ dependência) com o CSS do `layout.css`. Só animam `transform` e `opacity`, com
   vão para a fila e entram quando um sai.
 - **Leitor de tela.** O script cria a `<div class="nv-avisos" role="region" aria-label="Avisos">` (ou reaproveita
   a que já está na página) com duas regiões vivas escondidas: a educada (`polite`) para info, sucesso e
-  carregando, e a assertiva (`assertive`) para erro e atenção.
-- **Teclado.** `Alt+T` leva o foco ao aviso mais novo e abre a pilha. `Esc` fecha o aviso com foco e devolve o foco
+  carregando, e a assertiva (`assertive`) para erro e atenção. Tudo isso é criado assim que a página carrega, não
+  no primeiro aviso: o leitor de tela ignora texto posto numa região viva que acabou de nascer. Se as regiões forem
+  criadas na hora (por exemplo, a caixa foi tirada da página), o primeiro anúncio espera 100 ms. O mais seguro é
+  deixar a caixa já no HTML (no Angular, no `index.html`, fora do `<app-root>`):
+  `<div class="nv-avisos" role="region" aria-label="Avisos"></div>`.
+- **Teclado.** `Alt+A` leva o foco ao aviso mais novo e abre a pilha (`Alt+T` abriria o menu Ferramentas do
+  Firefox). `Esc` fecha o aviso com foco e devolve o foco
   para onde ele estava. Os botões têm `:focus-visible` e alvo de 44 px (`--nv-controle`).
 - **Tempo.** O padrão é 5000 ms. O tempo pausa com o mouse ou o foco na pilha (que abre, mostrando todos), com a aba
-  escondida e durante o arraste, e continua de onde parou. `duracao: Infinity` deixa fixo.
-- **Arrastar para o lado.** Passou de 45% da largura, ou foi um gesto rápido, o aviso sai; senão volta ao lugar.
+  escondida e durante o arraste, e continua de onde parou. Com a pilha aberta, uma ponte invisível
+  (`--nv-altura-aberta`) cobre os vãos entre os avisos, para a pilha não fechar no meio do caminho do mouse. `duracao: Infinity` deixa fixo.
+- **Arrastar para o lado.** Passou de 35% da largura, ou foi um peteleco (pelo menos 24 px a mais de 0,5 px/ms), o
+  aviso sai; senão volta ao lugar. Um tremido curto não dispensa.
   Começar o arraste em cima de um botão não conta.
 - **Entrada e saída.** Entra com `@starting-style` e sai com `data-saindo`; o nó é removido no `transitionend`
   (com uma folga de segurança). Com `prefers-reduced-motion: reduce` a pilha vira lista, sem deslocar nem escalar,
@@ -45,6 +52,7 @@ o erro) e deve devolver texto; se lançar ou devolver outra coisa, aparece "Algo
 <link rel="stylesheet" href="/css/layout.css" />
 <script src="/js/nuvy-aviso.js" defer></script>
 
+<div class="nv-avisos" role="region" aria-label="Avisos"></div>
 <button class="nv-botao" type="button" id="salvar">Salvar</button>
 <script>
   document.getElementById('salvar').addEventListener('click', () => {
@@ -70,7 +78,9 @@ nuvyAviso.sucesso('Cliente arquivado.', {
 ## Angular
 
 Copie `nuvy-aviso.js` para `public/js/` e ponha no `index.html` com `<script src="js/nuvy-aviso.js" defer></script>`
-(ou no `scripts` do `angular.json`, porque ele é script comum). Um serviço pequeno deixa o uso tipado:
+(ou no `scripts` do `angular.json`, porque ele é script comum). No mesmo `index.html`, ponha a caixa fora do
+`<app-root>`, para as regiões vivas já existirem quando o primeiro aviso chegar:
+`<div class="nv-avisos" role="region" aria-label="Avisos"></div>`. Um serviço pequeno deixa o uso tipado:
 
 ```ts
 type Tipo = 'info' | 'sucesso' | 'atencao' | 'erro' | 'carregando';

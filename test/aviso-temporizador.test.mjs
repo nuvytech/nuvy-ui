@@ -106,6 +106,26 @@ test('arraste: 20% devolve o aviso ao lugar e limpa o transform', () => {
   assert.equal(saindo(li), true, 'o tempo volta a correr depois de soltar');
 });
 
+test('arraste: 40% devagar já dispensa (o limite é 35%)', () => {
+  const a = carregarAviso();
+  const li = a.item(a.api.mostrar({ texto: 'arraste', duracao: Infinity }));
+  li.largura = 300;
+  arrastar(a, li, -120, 2000);
+  assert.equal(saindo(li), true);
+});
+
+test('arraste: tremido rápido e curto não dispensa; arraste curto e lento também não', () => {
+  const a = carregarAviso();
+  const tremido = a.item(a.api.mostrar({ texto: 'tremido', duracao: Infinity }));
+  tremido.largura = 300;
+  arrastar(a, tremido, 12, 10); // 1,2 px/ms, mas só 12 px
+  assert.equal(saindo(tremido), false);
+  const lento = a.item(a.api.mostrar({ texto: 'lento', duracao: Infinity }));
+  lento.largura = 300;
+  arrastar(a, lento, 60, 300); // 0,2 px/ms e 20%
+  assert.equal(saindo(lento), false);
+});
+
 test('arraste: gesto rápido dispensa mesmo curto; pointercancel devolve', () => {
   const a = carregarAviso();
   const rapido = a.item(a.api.mostrar({ texto: 'rápido', duracao: Infinity }));

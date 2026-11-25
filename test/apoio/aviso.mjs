@@ -3,9 +3,15 @@ import { ambiente, lerArq } from './dom-falso.mjs';
 
 const codigo = lerArq('modelos/nuvy-aviso.js');
 
-export function carregarAviso(opcoes) {
-  const amb = ambiente(opcoes);
+// antes(document): monta o HTML da página antes do script carregar.
+// Por padrão o relógio anda o atraso do primeiro anúncio, como numa página já aberta há um tempo;
+// { recemCarregada: true } pula isso para testar o atraso.
+export function carregarAviso(opcoes = {}, antes) {
+  const { recemCarregada, ...resto } = opcoes;
+  const amb = ambiente(resto);
+  if (antes) antes(amb.document);
   amb.rodar(codigo);
+  if (!recemCarregada) amb.clock.avancar(100);
   const api = amb.ctx.nuvyAviso;
   const caixa = () => amb.document.querySelector('.nv-avisos');
   const itens = () => (caixa() ? caixa().querySelectorAll('li') : []);

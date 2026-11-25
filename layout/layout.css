@@ -1245,6 +1245,7 @@ summary.nv-botao::-webkit-details-marker {
 /* Aviso flutuante (toast): ponha os .nv-aviso dentro de <div class="nv-avisos" role="region" aria-label="Avisos">.
    Entra sozinho; para sair, ponha data-saindo no aviso e remova-o ao fim da transição (transitionend). */
 .nv-avisos {
+  --nv-altura-aberta: 0px; /* o nuvy-aviso.js escreve a altura da pilha aberta */
   position: fixed;
   right: var(--nv-esp-4);
   bottom: var(--nv-esp-4);
@@ -1300,6 +1301,17 @@ summary.nv-botao::-webkit-details-marker {
 }
 .nv-avisos[data-expandido] .nv-avisos__lista > .nv-aviso {
   transform: translateY(calc(var(--nv-desloc) * -1));
+}
+/* Ponte invisível com a altura da pilha aberta (--nv-altura-aberta, escrita pelo JS): sem ela o mouse cai
+   no vão entre dois avisos, sai da caixa e a pilha fecha no meio do caminho. Fica atrás dos avisos. */
+.nv-avisos[data-expandido]::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: -1;
+  height: var(--nv-altura-aberta);
 }
 .nv-avisos .nv-avisos__lista > .nv-aviso[data-saindo] {
   opacity: 0;
